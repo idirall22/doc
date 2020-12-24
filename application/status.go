@@ -4,23 +4,23 @@ package app
 type ApplicationStatus int
 
 const (
-	startApply ApplicationStatus = iota
-	afterApply
-	startSchedule
-	afterSchedule
-	startInterview
-	afterInterview
-	offer
-	closed
+	StartApply ApplicationStatus = iota
+	AfterApply
+	StartSchedule
+	AfterSchedule
+	StartInterview
+	AfterInterview
+	Offer
+	Closed
 )
 
 var statusMap = map[ApplicationStatus]string{
-	startApply:     "startApply ",
-	afterApply:     "afterApply",
-	startSchedule:  "startSchedule",
-	afterSchedule:  "afterSchedule",
-	startInterview: "startInterview",
-	afterInterview: "afterInterview",
-	offer:          "offer",
-	closed:         "closed",
+	StartApply:     "startApply ",
+	AfterApply:     "afterApply",
+	StartSchedule:  "startSchedule",
+	AfterSchedule:  "afterSchedule",
+	StartInterview: "startInterview",
+	AfterInterview: "afterInterview",
+	Offer:          "offer",
+	Closed:         "closed",
 }

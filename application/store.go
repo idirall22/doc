@@ -15,6 +15,21 @@ func (s *Store) Add(job *Job) int {
 	return id
 }
 
+// List list jobs
+func (s Store) List(u interface{}) []*Job {
+	switch u.(type) {
+	case Candidate:
+		out := []*Job{}
+		for _, job := range s.Jobs {
+			if job.Open {
+				out = append(out, job)
+			}
+		}
+		return out
+	}
+	return s.Jobs
+}
+
 // Apply create a new application to a job.
 func (s *Store) Apply(c *Candidate, jobID int) *Application {
 	var app *Application
