@@ -30,9 +30,12 @@ func (c *Candidate) UpdateApplication(appID int, act Action) {
 
 // Apply for a job.
 func (c *Candidate) Apply(jobID int) *Application {
-	// TODO check if job exists
-	app := c.s.Apply(c, jobID)
-	return app
+	for _, job := range c.s.List(Candidate{}) {
+		if job.ID == jobID {
+			return c.s.Apply(c, jobID)
+		}
+	}
+	return nil
 }
 
 // ListApplication return list of application ids.

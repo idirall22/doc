@@ -17,18 +17,7 @@ func main() {
 
 	exit := false
 	for !exit {
-		prompt := promptui.Select{
-			Label:   "Users",
-			Items:   []string{"Recruiter", "Candidate", "Exit"},
-			Pointer: func(in []rune) []rune { return []rune{'|'} },
-		}
-
-		_, user, err := prompt.Run()
-		if err != nil {
-			fmt.Printf("Prompt failed %v\n", err)
-			return
-		}
-
+		user := chooseUser()
 		ret := false
 		switch user {
 
@@ -88,6 +77,19 @@ func main() {
 	}
 }
 
+func chooseUser() string {
+	prompt := promptui.Select{
+		Label:   "Users",
+		Items:   []string{"Recruiter", "Candidate", "Exit"},
+		Pointer: func(in []rune) []rune { return []rune{'|'} },
+	}
+
+	_, user, err := prompt.Run()
+	if err != nil {
+		log.Fatalf("Prompt failed %v\n", err)
+	}
+	return user
+}
 func recruiterChoice(store *app.Store) string {
 	items := []string{
 		"Post Job",
@@ -99,7 +101,7 @@ func recruiterChoice(store *app.Store) string {
 	}
 
 	prompt := promptui.Select{
-		Label: "Recruiter Actions:",
+		Label: "Recruiter Actions",
 		Items: items,
 	}
 
@@ -120,16 +122,14 @@ func recruiterCreateJob(r *app.Recruiter) {
 
 	description, err := prompt.Run()
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return
+		log.Fatalf("Prompt failed %v\n", err)
 	}
 	// scan for interviews steps.
 	prompt.Label = "How Many Interviews? (DEFAULT=1)"
 	prompt.Default = "1"
 	interviewSteps, err := prompt.Run()
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return
+		log.Fatalf("Prompt failed %v\n", err)
 	}
 
 	// scan for schedule
@@ -138,8 +138,7 @@ func recruiterCreateJob(r *app.Recruiter) {
 	schedule, err := prompt.Run()
 
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return
+		log.Fatalf("Prompt failed %v\n", err)
 	}
 
 	// create job
@@ -165,13 +164,9 @@ func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
 				Label: "Actions",
 				Items: items,
 			}
-			// prompt.Label = "Actions"
-			// prompt.Items = items
-
 			_, action, err := prompt.Run()
 			if err != nil {
-				fmt.Printf("Prompt failed %v\n", err)
-				return
+				log.Fatalf("Prompt failed %v\n", err)
 			}
 
 			if action != "return" {
@@ -183,8 +178,7 @@ func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
 					}
 					date, err := prompt.Run()
 					if err != nil {
-						fmt.Printf("Prompt failed %v\n", err)
-						return
+						log.Fatalf("Prompt failed %v\n", err)
 					}
 					r.FixDate(a, parseInt(date))
 				} else {
@@ -206,8 +200,7 @@ func candidateApplication(c *app.Candidate) {
 		}
 		_, action, err := prompt.Run()
 		if err != nil {
-			fmt.Printf("Prompt failed %v\n", err)
-			return
+			log.Fatalf("Prompt failed %v\n", err)
 		}
 		if action != "return" {
 			if action == app.ActionIntStringMap[app.Submitdate] {
@@ -218,8 +211,7 @@ func candidateApplication(c *app.Candidate) {
 				}
 				dates, err := prompt.Run()
 				if err != nil {
-					fmt.Printf("Prompt failed %v\n", err)
-					return
+					log.Fatalf("Prompt failed %v\n", err)
 				}
 				c.Schedule(a, strings.Split(dates, ","))
 			} else {
@@ -237,8 +229,7 @@ func candidateApply(c *app.Candidate) {
 	}
 	jobID, err := prompt.Run()
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return
+		log.Fatalf("Prompt failed %v\n", err)
 	}
 	a := c.Apply(parseInt(jobID))
 	if a == nil {

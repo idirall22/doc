@@ -77,7 +77,7 @@ func (a *Application) updateStep(step *ApplicationStep) {
 		step = a.GetCurrentStep()
 	} else if step.recruiterAction == Skip {
 		a.offerStep()
-		step = a.GetCurrentStep()
+		return
 	}
 
 	switch step.status {
