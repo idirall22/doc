@@ -13,16 +13,24 @@ import (
 )
 
 func main() {
+	// create a store
 	store := app.NewStore()
+	// create a recuiter
 	r := app.NewRecruiter(store)
+	// create a candidate
 	c := app.NewCandidate(store)
+	// clear cmd console
 	clearCMD()
+
 	exit := false
 	for !exit {
 		user := chooseUser()
 		ret := false
 		clearCMD()
+
+		// switch between Recruiter and the Candidate
 		switch user {
+
 		case "Recruiter":
 			for !ret {
 				action := recruiterChoice(store)
@@ -33,6 +41,7 @@ func main() {
 					break
 
 				case "My Jobs":
+					// list all recuiter jobs.
 					for _, job := range store.List(nil) {
 						job.Print()
 					}
@@ -110,6 +119,7 @@ func recruiterChoice(store *app.Store) string {
 	return actions
 }
 
+// create a new job.
 func recruiterCreateJob(r *app.Recruiter) {
 	// scan for job description.
 	prompt := promptui.Prompt{
@@ -153,6 +163,7 @@ func recruiterCreateJob(r *app.Recruiter) {
 	}
 }
 
+// view and update current applications.
 func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
 	application := false
 	for _, job := range store.List(nil) {
@@ -197,6 +208,7 @@ func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
 	}
 }
 
+// list candidate application
 func candidateApplication(c *app.Candidate) {
 	for _, a := range c.ListApplication() {
 		a.GetHistory()
@@ -229,6 +241,7 @@ func candidateApplication(c *app.Candidate) {
 	}
 }
 
+// Apply for a job
 func candidateApply(s *app.Store, c *app.Candidate) {
 	jobs := s.List(app.Candidate{})
 	items := []int{}
@@ -251,6 +264,7 @@ func candidateApply(s *app.Store, c *app.Candidate) {
 	}
 }
 
+// List open jobs
 func candidateListOpenJobs(store *app.Store) {
 	for _, job := range store.List(app.Candidate{}) {
 		job.Print()

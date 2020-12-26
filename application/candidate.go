@@ -34,9 +34,8 @@ func (c *Candidate) Apply(jobID int) *Application {
 		if job.ID == jobID {
 			if job.Open {
 				return c.s.Apply(c, jobID)
-			} else {
-				return nil
 			}
+			return nil
 		}
 	}
 	return nil
