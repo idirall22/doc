@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	app "github.com/idirall22/doc/application"
 	"github.com/manifoldco/promptui"
 )
@@ -14,13 +16,13 @@ func main() {
 	store := app.NewStore()
 	r := app.NewRecruiter(store)
 	c := app.NewCandidate(store)
-
+	clearCMD()
 	exit := false
 	for !exit {
 		user := chooseUser()
 		ret := false
+		clearCMD()
 		switch user {
-
 		case "Recruiter":
 			for !ret {
 				action := recruiterChoice(store)
@@ -28,7 +30,6 @@ func main() {
 
 				case "Post Job":
 					recruiterCreateJob(r)
-					ret = true
 					break
 
 				case "My Jobs":
@@ -39,7 +40,6 @@ func main() {
 
 				case "View/update Application":
 					recruiterViewUpdateApplication(store, r)
-					ret = true
 					break
 
 				case "Return":
@@ -58,12 +58,10 @@ func main() {
 
 				case "My Applications":
 					candidateApplication(c)
-					ret = true
 					break
 
 				case "Apply":
-					candidateApply(c)
-					ret = true
+					candidateApply(store, c)
 					break
 
 				case "Return":
@@ -115,48 +113,51 @@ func recruiterChoice(store *app.Store) string {
 func recruiterCreateJob(r *app.Recruiter) {
 	// scan for job description.
 	prompt := promptui.Prompt{
-		Label:   "Job description",
-		Default: "React Software developer",
-		Pointer: func(in []rune) []rune { return []rune{'|'} },
+		Label:       "Job description",
+		Default:     "React Software developer",
+		Pointer:     func(in []rune) []rune { return []rune{'|'} },
+		HideEntered: true,
 	}
 
 	description, err := prompt.Run()
 	if err != nil {
 		log.Fatalf("Prompt failed %v\n", err)
 	}
-	// scan for interviews steps.
-	prompt.Label = "How Many Interviews? (DEFAULT=1)"
-	prompt.Default = "1"
-	interviewSteps, err := prompt.Run()
+	prompt2 := promptui.Select{
+		Label: "how many interview steps are there?",
+		Items: []string{"1", "2", "3"},
+	}
 	if err != nil {
 		log.Fatalf("Prompt failed %v\n", err)
 	}
+	_, interviewSteps, err := prompt2.Run()
 
-	// scan for schedule
-	prompt.Label = "Need to fix Schedule? (DEFAULT=false)"
-	prompt.Default = "false"
-	schedule, err := prompt.Run()
+	prompt3 := promptui.Select{
+		Label: "Need to fix Schedule?",
+		Items: []string{"false", "true"},
+	}
 
+	_, schedule, err := prompt3.Run()
 	if err != nil {
 		log.Fatalf("Prompt failed %v\n", err)
 	}
-
-	// create job
 	ok := r.CreateJob(
 		description,
 		uint8(parseInt(interviewSteps)),
 		parseBool(schedule),
 	)
 	if ok {
-		fmt.Println("*** New Job created successfully :) ***")
+		color.Green("***New Job created successfuly :)***")
 	} else {
-		fmt.Println("Error to create a job :(")
+		color.Red("Error to create a job :(")
 	}
 }
 
 func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
+	application := false
 	for _, job := range store.List(nil) {
 		for _, a := range job.ListApplication() {
+			application = true
 			a.GetHistory()
 			items := a.ListActions(app.Recruiter{}, *a.GetCurrentStep())
 			items = append(items, "return")
@@ -171,21 +172,28 @@ func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
 
 			if action != "return" {
 				if action == app.ActionIntStringMap[app.Fixdate] {
-					prompt := promptui.Prompt{
-						Label:   "Date(DEFAULT=0)",
-						Default: "0",
-						Pointer: func(in []rune) []rune { return []rune{'|'} },
+					items := a.GetScheduledDates()
+					prompt := promptui.Select{
+						Label: "Choose one date",
+						Items: items,
 					}
-					date, err := prompt.Run()
+					_, action, err := prompt.Run()
 					if err != nil {
 						log.Fatalf("Prompt failed %v\n", err)
 					}
-					r.FixDate(a, parseInt(date))
+					for index, date := range items {
+						if action == date {
+							r.FixDate(a, index)
+						}
+					}
 				} else {
 					r.UpdateApplication(a.ID, app.ActionStringActionMap[action])
 				}
 			}
 		}
+	}
+	if !application {
+		color.Cyan("There are no candidates applications yet.")
 	}
 }
 
@@ -221,19 +229,25 @@ func candidateApplication(c *app.Candidate) {
 	}
 }
 
-func candidateApply(c *app.Candidate) {
-	prompt := promptui.Prompt{
-		Label:   "Job id(DEFAULT=1)",
-		Default: "1",
-		Pointer: func(in []rune) []rune { return []rune{'|'} },
+func candidateApply(s *app.Store, c *app.Candidate) {
+	jobs := s.List(app.Candidate{})
+	items := []int{}
+	for _, job := range jobs {
+		items = append(items, job.ID)
 	}
-	jobID, err := prompt.Run()
+	prompt := promptui.Select{
+		Label: "Apply to a job",
+		Items: items,
+	}
+	_, jobID, err := prompt.Run()
 	if err != nil {
 		log.Fatalf("Prompt failed %v\n", err)
 	}
 	a := c.Apply(parseInt(jobID))
 	if a == nil {
-		fmt.Println("Could not Apply to this job")
+		color.Red("Could not Apply to this job, the job was closed.")
+	} else {
+		color.Green("Application successful :)")
 	}
 }
 
@@ -244,6 +258,7 @@ func candidateListOpenJobs(store *app.Store) {
 }
 
 func candidateChoice(c *app.Candidate) string {
+
 	items := []string{
 		"List open Jobs",
 		"Apply",
@@ -269,7 +284,7 @@ func candidateChoice(c *app.Candidate) string {
 func parseBool(in string) bool {
 	out, err := strconv.ParseBool(in)
 	if err != nil {
-		log.Println("Error to parse bool value:", err)
+		// log.Println("Error to parse bool value:", err)
 		return false
 	}
 	return out
@@ -278,8 +293,14 @@ func parseBool(in string) bool {
 func parseInt(in string) int {
 	out, err := strconv.Atoi(in)
 	if err != nil {
-		log.Println("Error to parse int value:", err)
+		// log.Println("Error to parse int value:", err)
 		return 1
 	}
 	return out
+}
+
+func clearCMD() {
+	cmd := exec.Command("clear")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
 }

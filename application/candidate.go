@@ -32,7 +32,11 @@ func (c *Candidate) UpdateApplication(appID int, act Action) {
 func (c *Candidate) Apply(jobID int) *Application {
 	for _, job := range c.s.List(Candidate{}) {
 		if job.ID == jobID {
-			return c.s.Apply(c, jobID)
+			if job.Open {
+				return c.s.Apply(c, jobID)
+			} else {
+				return nil
+			}
 		}
 	}
 	return nil

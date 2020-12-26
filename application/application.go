@@ -3,6 +3,8 @@ package app
 import (
 	"fmt"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 // NewApplication create new application process.
@@ -33,6 +35,11 @@ type Application struct {
 	scheduledDates   []string
 	fixDate          int
 	stepsCount       uint
+}
+
+// GetScheduledDates get scheduled dates.
+func (a Application) GetScheduledDates() []string {
+	return a.scheduledDates
 }
 
 // GetCurrentStep get current step.
@@ -150,54 +157,54 @@ func (a *Application) ListActions(u interface{}, step ApplicationStep) []string 
 func (a *Application) startApplyStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The apply step, the candidate apply for a job.%s%s",
-		StartApply, Recive, Apply, a.currentInterview,
+		StartApply, Recive, Apply, a.currentInterview, a,
 	))
 }
 func (a *Application) afterApplyStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The after apply step, the recuiter has to [%s] the candidate can [%s].",
-		AfterApply, nothing, Accept, a.currentInterview,
+		AfterApply, nothing, Accept, a.currentInterview, a,
 	))
 }
 
 func (a *Application) startScheduleStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The start schedule step, the recruiter can [%s] the interview. The candidate has to [%s] the interview.",
-		StartSchedule, Accept, nothing, a.currentInterview,
+		StartSchedule, Accept, nothing, a.currentInterview, a,
 	))
 }
 
 func (a *Application) afterScheduleStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The after schedule step, the recruiter can [%s] date for interview. The candidate can [%s] the process",
-		AfterSchedule, nothing, Accept, a.currentInterview,
+		AfterSchedule, nothing, Accept, a.currentInterview, a,
 	))
 }
 func (a *Application) startInterviewStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The start interview step, the recuiter can [%s] the interview. The candidate can [%s] the interview",
-		StartInterview, Accept, nothing, a.currentInterview,
+		StartInterview, Accept, nothing, a.currentInterview, a,
 	))
 }
 
 func (a *Application) afterInterviewStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The after interview step, the recruiter can [%s] the interview. The candidate can [%s] the interview.",
-		AfterInterview, nothing, Accept, a.currentInterview,
+		AfterInterview, nothing, Accept, a.currentInterview, a,
 	))
 }
 
 func (a *Application) offerStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The offer step, the recruiter can [%s]. The candidate can [%s] the offer.",
-		Offer, Accept, nothing, a.currentInterview,
+		Offer, Accept, nothing, a.currentInterview, a,
 	))
 }
 
 func (a *Application) closeAppStep() {
 	a.steps = append(a.steps, newApplicationStep(
 		"The close application step, the application is colsed and archived.%s%s",
-		Closed, nothing, nothing, a.currentInterview,
+		Closed, nothing, nothing, a.currentInterview, a,
 	))
 }
 
@@ -238,7 +245,7 @@ func (a *Application) getActions(u interface{}, status ApplicationStatus, interv
 			actions = []Action{}
 			break
 		}
-		if interviewID >= 1 {
+		if interviewID >= 1 && status != Offer {
 			actions = append(actions, Skip)
 		}
 	case Candidate:
@@ -314,13 +321,10 @@ func (a Application) PrintStep(step *ApplicationStep) {
 
 // GetHistory display application history.
 func (a Application) GetHistory() {
-	fmt.Println("Job ID:", a.job.ID)
-	fmt.Println("Description:", a.job.Description)
-	fmt.Println("History Application:")
-	for _, step := range a.steps {
-		fmt.Println()
-		a.PrintStep(step)
+	a.job.Print()
+	d := color.New(color.FgWhite, color.BgBlue)
+	for index, step := range a.steps {
+		d.Printf("Step %d:", index+1)
 		step.PrintStep()
-		fmt.Println()
 	}
 }

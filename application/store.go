@@ -1,6 +1,8 @@
 package app
 
-import "fmt"
+import (
+	"github.com/fatih/color"
+)
 
 // Store application store.
 type Store struct {
@@ -77,9 +79,17 @@ func (j Job) ListApplication() []*Application {
 
 // Print print job description.
 func (j Job) Print() {
-	fmt.Println("\nJob ID:", j.ID)
-	fmt.Println("Job description:", j.Description)
-	fmt.Println("---> How many Interview?", j.Interview)
-	fmt.Println("---> Need Schedule?", j.Schedule)
-	fmt.Println()
+	status := "Open"
+	if !j.Open {
+		status = "Closed"
+	}
+	d := color.New(color.FgWhite, color.BgHiBlack)
+	d.Printf(`--------------------------------------------------
+Job ID: %d
+Status: %s
+Job description: %s
+Interview step: %d
+Schedule: %v
+--------------------------------------------------
+`, j.ID, status, j.Description, j.Interview, j.Schedule)
 }

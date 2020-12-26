@@ -1,5 +1,5 @@
 test:
 	go test -v ./application/application_test.go
 
-cli:
+run:
 	go run cmd/main.go
