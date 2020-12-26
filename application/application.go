@@ -157,40 +157,40 @@ func (a *Application) ListActions(u interface{}, step ApplicationStep) []string 
 
 func (a *Application) startApplyStep() {
 	a.steps = append(a.steps, newApplicationStep(
-		"The apply step, the candidate apply for a job.%s%s",
+		"Start of the application, the candidate applies for a job.%s%s",
 		StartApply, Recive, Apply, a.currentInterview, a,
 	))
 }
 func (a *Application) afterApplyStep() {
 	a.steps = append(a.steps, newApplicationStep(
-		"The after apply step, the recuiter has to [%s] the candidate can [%s].",
+		"After the applying step, the recruiter can [%s] the application. The candidate can [%s] the application.",
 		AfterApply, nothing, Accept, a.currentInterview, a,
 	))
 }
 
 func (a *Application) startScheduleStep() {
 	a.steps = append(a.steps, newApplicationStep(
-		"The start schedule step, the recruiter can [%s] the interview. The candidate has to [%s] the interview.",
+		"Start the appointment scheduling step, the recruiter can [%s] the interview. The candidate has to [%s] for the interview.",
 		StartSchedule, Accept, nothing, a.currentInterview, a,
 	))
 }
 
 func (a *Application) afterScheduleStep() {
 	a.steps = append(a.steps, newApplicationStep(
-		"The after schedule step, the recruiter can [%s] date for interview. The candidate can [%s] the process",
+		"After the appointment scheduling step, the recruiter can [%s] date for interview. The candidate can [%s] the process",
 		AfterSchedule, nothing, Accept, a.currentInterview, a,
 	))
 }
 func (a *Application) startInterviewStep() {
 	a.steps = append(a.steps, newApplicationStep(
-		"The start interview step, the recuiter can [%s] the interview. The candidate can [%s] the interview",
+		"Start the interview step, the recuiter can [%s] the interview. The candidate can [%s] the interview",
 		StartInterview, Accept, nothing, a.currentInterview, a,
 	))
 }
 
 func (a *Application) afterInterviewStep() {
 	a.steps = append(a.steps, newApplicationStep(
-		"The after interview step, the recruiter can [%s] the interview. The candidate can [%s] the interview.",
+		"After the interview step, the recruiter can [%s] the interview. The candidate can [%s] the interview.",
 		AfterInterview, nothing, Accept, a.currentInterview, a,
 	))
 }
@@ -204,7 +204,7 @@ func (a *Application) offerStep() {
 
 func (a *Application) closeAppStep() {
 	a.steps = append(a.steps, newApplicationStep(
-		"The close application step, the application is colsed and archived.%s%s",
+		"Closing application step, the application is colsed and archived.%s%s",
 		Closed, nothing, nothing, a.currentInterview, a,
 	))
 }
@@ -247,7 +247,7 @@ func (a *Application) getActions(u interface{}, status ApplicationStatus, interv
 			actions = []Action{}
 			break
 		}
-		if interviewID >= 1 && status != Offer {
+		if interviewID >= 1 && status != Offer && status != Closed {
 			actions = append(actions, Skip)
 		}
 	case Candidate:

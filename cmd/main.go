@@ -36,23 +36,24 @@ func main() {
 				action := recruiterChoice(store)
 				switch action {
 
-				case "Post Job":
+				case "Post a new job":
 					recruiterCreateJob(r)
 					break
 
-				case "My Jobs":
+				case "Job postings":
 					// list all recuiter jobs.
 					for _, job := range store.List(nil) {
 						job.Print()
 					}
 					break
 
-				case "View/update Application":
+				case "Manage candidates":
 					recruiterViewUpdateApplication(store, r)
 					break
 
 				case "Return":
 					ret = true
+					clearCMD()
 					break
 				}
 			}
@@ -65,7 +66,7 @@ func main() {
 					candidateListOpenJobs(store)
 					break
 
-				case "My Applications":
+				case "My applications":
 					candidateApplication(c)
 					break
 
@@ -75,6 +76,7 @@ func main() {
 
 				case "Return":
 					ret = true
+					clearCMD()
 					break
 				}
 			}
@@ -99,12 +101,12 @@ func chooseUser() string {
 }
 func recruiterChoice(store *app.Store) string {
 	items := []string{
-		"Post Job",
-		"View/update Application",
+		"Post a new job",
+		"Manage candidates",
 		"Return",
 	}
 	if len(store.List(nil)) > 0 {
-		items = append(items[:len(items)-1], []string{"My Jobs", items[len(items)-1]}...)
+		items = append(items[:len(items)-1], []string{"Job postings", items[len(items)-1]}...)
 	}
 
 	prompt := promptui.Select{
@@ -134,7 +136,7 @@ func recruiterCreateJob(r *app.Recruiter) {
 		log.Fatalf("Prompt failed %v\n", err)
 	}
 	prompt2 := promptui.Select{
-		Label: "how many interview steps are there?",
+		Label: "Rounds of Interviews",
 		Items: []string{"1", "2", "3"},
 	}
 	if err != nil {
@@ -143,7 +145,7 @@ func recruiterCreateJob(r *app.Recruiter) {
 	_, interviewSteps, err := prompt2.Run()
 
 	prompt3 := promptui.Select{
-		Label: "Need to fix Schedule?",
+		Label: "Appointment Scheduling?",
 		Items: []string{"false", "true"},
 	}
 
@@ -157,9 +159,9 @@ func recruiterCreateJob(r *app.Recruiter) {
 		parseBool(schedule),
 	)
 	if ok {
-		color.Green("***New Job created successfuly :)***")
+		color.Green("***New Job created successfully :)***")
 	} else {
-		color.Red("Error to create a job :(")
+		color.Red("Error, impossible to create a new job :(")
 	}
 }
 
@@ -185,7 +187,7 @@ func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
 				if action == app.ActionIntStringMap[app.Fixdate] {
 					items := a.GetScheduledDates()
 					prompt := promptui.Select{
-						Label: "Choose one date",
+						Label: "Choose an appointment date",
 						Items: items,
 					}
 					_, action, err := prompt.Run()
@@ -204,13 +206,13 @@ func recruiterViewUpdateApplication(store *app.Store, r *app.Recruiter) {
 		}
 	}
 	if !application {
-		color.Cyan("There are no candidates applications yet.")
+		color.Red("No one has applied yet.")
 	}
 }
 
 // list candidate application
 func candidateApplication(c *app.Candidate) {
-	for _, a := range c.ListApplication() {
+	for _, a := range c.ListApplication(nil) {
 		a.GetHistory()
 		items := a.ListActions(app.Candidate{}, *a.GetCurrentStep())
 		items = append(items, "return")
@@ -258,7 +260,7 @@ func candidateApply(s *app.Store, c *app.Candidate) {
 	}
 	a := c.Apply(parseInt(jobID))
 	if a == nil {
-		color.Red("Could not Apply to this job, the job was closed.")
+		color.Red("Can not Apply for this job, the job was closed.")
 	} else {
 		color.Green("Application successful :)")
 	}
@@ -278,9 +280,9 @@ func candidateChoice(c *app.Candidate) string {
 		"Apply",
 		"Return",
 	}
-	if len(c.ListApplication()) > 0 {
+	if len(c.ListApplication(nil)) > 0 {
 		items = append(items[:len(items)-1],
-			[]string{"My Applications", items[len(items)-1]}...)
+			[]string{"My applications", items[len(items)-1]}...)
 	}
 
 	prompt := promptui.Select{

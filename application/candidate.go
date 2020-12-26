@@ -42,9 +42,9 @@ func (c *Candidate) Apply(jobID int) *Application {
 }
 
 // ListApplication return list of application ids.
-func (c Candidate) ListApplication() []*Application {
+func (c Candidate) ListApplication(u interface{}) []*Application {
 	applications := []*Application{}
-	for _, job := range c.s.List(Candidate{}) {
+	for _, job := range c.s.List(u) {
 		for _, app := range job.applications {
 			applications = append(applications, app)
 		}
