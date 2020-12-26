@@ -52,6 +52,7 @@ func (a Application) ListSteps() []*ApplicationStep {
 	return a.steps
 }
 
+// update application state.
 func (a *Application) setState(u interface{}, act Action) {
 	// check if the application is finished
 	if a.GetCurrentStep().status == Closed {
@@ -135,7 +136,7 @@ func (a *Application) updateStep(step *ApplicationStep) {
 	}
 }
 
-// check if the application process was stoped.
+// Check if the application process was stopped.
 func (a Application) checkApplicationProcess(cAct, rAct Action) bool {
 	if cAct == Reject || cAct == Decline || cAct == Cancel ||
 		rAct == Reject || rAct == Decline || rAct == Cancel {
@@ -144,7 +145,7 @@ func (a Application) checkApplicationProcess(cAct, rAct Action) bool {
 	return true
 }
 
-// ListActions list all actions.
+// ListActions list all actions that could be made by a user in a specific step as string.
 func (a *Application) ListActions(u interface{}, step ApplicationStep) []string {
 	acts := a.getActions(u, step.status, step.interviewID)
 	out := []string{}
@@ -208,6 +209,7 @@ func (a *Application) closeAppStep() {
 	))
 }
 
+// get actions that could be made by a user in a specific step.
 func (a *Application) getActions(u interface{}, status ApplicationStatus, interviewID uint8) []Action {
 	var actions []Action
 
