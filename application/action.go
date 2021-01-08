@@ -17,8 +17,8 @@ const (
 	Skip
 )
 
-// ActionIntStringMap a map that allows to get action name.
-var ActionIntStringMap = map[Action]string{
+// ActionStringMap a map that allows to get action name.
+var ActionStringMap = map[Action]string{
 	nothing:    "nothing",
 	Apply:      "apply",
 	Recive:     "recive",
@@ -32,8 +32,8 @@ var ActionIntStringMap = map[Action]string{
 	Skip:       "skip",
 }
 
-// ActionStringActionMap get action int from string.
-var ActionStringActionMap = map[string]Action{
+// StringActionMap get action int from string.
+var StringActionMap = map[string]Action{
 	"nothing":    nothing,
 	"apply":      Apply,
 	"recive":     Recive,

@@ -2,141 +2,118 @@ package app
 
 import (
 	"fmt"
-	"strings"
-
-	"github.com/fatih/color"
+	"time"
 )
+
+// Application struct.
+type Application struct {
+	ID            int
+	C             *Candidate
+	Steps         []*ApplicationStep
+	ProposedDates []*ScheduleDate
+	Job           *Job
+}
+
+// ScheduleDate struct.
+type ScheduleDate struct {
+	active bool
+	date   time.Time
+}
 
 // NewApplication create new application process.
 func NewApplication(c *Candidate, job *Job) *Application {
-	id := len(job.ListApplication()) + 1
-
+	id := len(job.applications) + 1
 	app := &Application{
-		ID:         id,
-		candidate:  c,
-		steps:      []*ApplicationStep{},
-		fixDate:    -1,
-		job:        job,
-		stepsCount: 1,
+		ID:            id,
+		C:             c,
+		Steps:         []*ApplicationStep{},
+		ProposedDates: []*ScheduleDate{},
+		Job:           job,
 	}
-	app.startApplyStep()
-	app.afterApplyStep()
+	app.newStep(store[StartApply])
+	app.newStep(store[AfterApply])
 	return app
-}
-
-// Application application process.
-type Application struct {
-	ID               int
-	candidate        *Candidate
-	steps            []*ApplicationStep
-	job              *Job
-	currentInterview uint8
-	reschedule       bool
-	scheduledDates   []string
-	fixDate          int
-	stepsCount       uint
-}
-
-// GetScheduledDates get scheduled dates.
-func (a Application) GetScheduledDates() []string {
-	return a.scheduledDates
 }
 
 // GetCurrentStep get current step.
 func (a Application) GetCurrentStep() *ApplicationStep {
-	return a.steps[len(a.steps)-1]
+	return a.Steps[len(a.Steps)-1]
 }
 
-// ListSteps list all application steps.
-func (a Application) ListSteps() []*ApplicationStep {
-	return a.steps
+// validateAction validate users actions
+func (a *Application) validateAction(u interface{}, status ApplicationStatus, act Action) bool {
+	step, ok := store[status]
+	if ok {
+		switch u.(type) {
+		case Recruiter:
+			for _, action := range step.recuirterAllowedActions {
+				if action == act {
+					return true
+				}
+			}
+			break
+		case Candidate:
+			for _, action := range step.candidateAllowedActions {
+				if action == act {
+					return true
+				}
+			}
+			break
+		default:
+			return false
+		}
+	}
+	return false
 }
 
-// update application state.
-func (a *Application) setState(u interface{}, act Action) {
+// ProposeDates candidate propose meeting dates.
+func (a *Application) ProposeDates(times ...time.Time) {
+	dates := []*ScheduleDate{}
+	for _, date := range times {
+		dates = append(dates, &ScheduleDate{date: date})
+	}
+	a.ProposedDates = dates
+	a.SetState(Candidate{}, Submitdate)
+}
+
+// FixDate recruiter fix the interview date.
+func (a *Application) FixDate(index int) {
+	a.ProposedDates[index].active = true
+	a.SetState(Recruiter{}, Fixdate)
+}
+
+// RescheduleDate request reschedule
+func (a *Application) RescheduleDate() {
+	a.Job.conditions = append(a.Job.conditions, NewJobConstraint(AfterSchedule, StartSchedule))
+	a.SetState(Recruiter{}, Reschedule)
+}
+
+// SetState set application state.
+func (a *Application) SetState(u interface{}, act Action) {
+	curStep := a.GetCurrentStep()
+
 	// check if the application is finished
-	if a.GetCurrentStep().status == Closed {
+	if curStep.Step.name == Closed {
 		fmt.Println("*** The Application process is closed ***")
 		return
 	}
-
-	step := a.GetCurrentStep()
-	if !a.validateAction(u, act, step.status, step.interviewID) {
-		fmt.Println(ActionIntStringMap[act], "Action Not valid in the step:", statusMap[step.status])
+	if !a.validateAction(u, curStep.Step.name, act) {
+		fmt.Println(ActionStringMap[act], "Action Not valid in the step")
 		return
 	}
 
 	switch u.(type) {
 	case Recruiter:
-		step.recruiterAction = act
+		curStep.RecuirterAction = act
 	case Candidate:
-		step.candidateAction = act
+		curStep.CandidateAction = act
 	default:
 		return
 	}
-	a.updateStep(a.GetCurrentStep())
+
+	a.addStep(curStep)
 }
 
-// update a step.
-func (a *Application) updateStep(step *ApplicationStep) {
-	// check if the application process was closed by a user.
-	if !a.checkApplicationProcess(step.recruiterAction, step.candidateAction) {
-		a.closeAppStep()
-		step = a.GetCurrentStep()
-	} else if step.recruiterAction == Skip {
-		a.offerStep()
-		return
-	}
-
-	switch step.status {
-	case StartApply:
-
-	case AfterApply:
-		if a.job.Schedule {
-			a.startScheduleStep()
-		} else {
-			a.startInterviewStep()
-		}
-		break
-
-	case StartSchedule:
-		if len(a.scheduledDates) == 0 {
-			fmt.Println("The candidate has to propose dates for interview.")
-		} else {
-			a.afterScheduleStep()
-		}
-		break
-
-	case AfterSchedule:
-		if a.fixDate == -1 || a.reschedule {
-			fmt.Println("recruiter requiest a reschedule")
-			a.startScheduleStep()
-		} else {
-			a.startInterviewStep()
-		}
-		break
-
-	case StartInterview:
-		a.afterInterviewStep()
-		break
-
-	case AfterInterview:
-		a.currentInterview++
-		if a.job.Interview == a.currentInterview {
-			a.offerStep()
-		} else {
-			a.startInterviewStep()
-		}
-		break
-
-	case Offer:
-		a.closeAppStep()
-		a.job.Open = false
-		break
-	}
-}
-
-// Check if the application process was stopped.
 func (a Application) checkApplicationProcess(cAct, rAct Action) bool {
 	if cAct == Reject || cAct == Decline || cAct == Cancel ||
 		rAct == Reject || rAct == Decline || rAct == Cancel {
@@ -145,188 +122,54 @@ func (a Application) checkApplicationProcess(cAct, rAct Action) bool {
 	return true
 }
 
-// ListActions list all actions that could be made by a user in a specific step as string.
-func (a *Application) ListActions(u interface{}, step ApplicationStep) []string {
-	acts := a.getActions(u, step.status, step.interviewID)
-	out := []string{}
-	for _, act := range acts {
-		out = append(out, ActionIntStringMap[act])
-	}
-	return out
+// addStep update step.
+func (a *Application) addStep(step *ApplicationStep) {
+	next := a.getNextStepStatus(step)
+	a.newStep(store[next])
 }
 
-func (a *Application) startApplyStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"Start of the application, the candidate applies for a job.%s%s",
-		StartApply, Recive, Apply, a.currentInterview, a,
-	))
-}
-func (a *Application) afterApplyStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"After the applying step, the recruiter can [%s] the application. The candidate can [%s] the application.",
-		AfterApply, nothing, Accept, a.currentInterview, a,
-	))
-}
+func (a *Application) getNextStepStatus(step *ApplicationStep) ApplicationStatus {
+	var next ApplicationStatus
+	if !a.checkApplicationProcess(step.RecuirterAction, step.CandidateAction) {
+		next = Closed
 
-func (a *Application) startScheduleStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"Start the appointment scheduling step, the recruiter can [%s] the interview. The candidate has to [%s] for the interview.",
-		StartSchedule, Accept, nothing, a.currentInterview, a,
-	))
-}
+	} else if step.RecuirterAction == Skip {
+		next = Offer
 
-func (a *Application) afterScheduleStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"After the appointment scheduling step, the recruiter can [%s] date for interview. The candidate can [%s] the process",
-		AfterSchedule, nothing, Accept, a.currentInterview, a,
-	))
-}
-func (a *Application) startInterviewStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"Start the interview step, the recuiter can [%s] the interview. The candidate can [%s] the interview",
-		StartInterview, Accept, nothing, a.currentInterview, a,
-	))
-}
-
-func (a *Application) afterInterviewStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"After the interview step, the recruiter can [%s] the interview. The candidate can [%s] the interview.",
-		AfterInterview, nothing, Accept, a.currentInterview, a,
-	))
-}
-
-func (a *Application) offerStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"The offer step, the recruiter can [%s]. The candidate can [%s] the offer.",
-		Offer, Accept, nothing, a.currentInterview, a,
-	))
-}
-
-func (a *Application) closeAppStep() {
-	a.steps = append(a.steps, newApplicationStep(
-		"Closing application step, the application is colsed and archived.%s%s",
-		Closed, nothing, nothing, a.currentInterview, a,
-	))
-}
-
-// get actions that could be made by a user in a specific step.
-func (a *Application) getActions(u interface{}, status ApplicationStatus, interviewID uint8) []Action {
-	var actions []Action
-
-	switch u.(type) {
-	case Recruiter:
-		switch status {
-		case StartApply:
-			actions = []Action{}
-			break
-
-		case AfterApply:
-			actions = []Action{Accept, Reject}
-			break
-
-		case StartSchedule:
-			actions = []Action{Cancel}
-			break
-
-		case AfterSchedule:
-			actions = []Action{Cancel, Fixdate, Reschedule}
-			break
-
-		case StartInterview:
-			actions = []Action{Cancel}
-			break
-
-		case AfterInterview:
-			actions = []Action{Accept, Reject}
-			break
-
-		case Offer:
-			actions = []Action{Cancel}
-			break
-		case Closed:
-			actions = []Action{}
-			break
-		}
-		if interviewID >= 1 && status != Offer && status != Closed {
-			actions = append(actions, Skip)
-		}
-	case Candidate:
-		switch status {
-		case StartApply:
-			actions = []Action{Apply}
-			break
-
-		case AfterApply:
-			actions = []Action{Cancel}
-			break
-
-		case StartSchedule:
-			actions = []Action{Submitdate, Cancel}
-			break
-
-		case AfterSchedule:
-			actions = []Action{Cancel}
-			break
-
-		case StartInterview:
-			actions = []Action{Accept, Reject}
-			break
-
-		case AfterInterview:
-			actions = []Action{Decline}
-			break
-
-		case Offer:
-			actions = []Action{Accept, Decline}
-			break
-		case Closed:
-			actions = []Action{}
-			break
+	} else {
+		next = a.checkCondition(step)
+		if next == None {
+			next = step.Step.nextStep
 		}
 	}
-	return actions
+	return next
 }
 
-// validate user action related to the current step.
-func (a *Application) validateAction(u interface{}, act Action, status ApplicationStatus, interviewID uint8) bool {
-	switch u.(type) {
-	case Recruiter:
-		for _, a := range a.getActions(u, status, interviewID) {
-			if a == act {
-				return true
-			}
+func (a *Application) checkCondition(step *ApplicationStep) ApplicationStatus {
+	for _, con := range a.Job.conditions {
+		if con.status == step.Step.name && !con.done {
+			con.done = true
+			return con.next
 		}
-		break
-	case Candidate:
-		for _, a := range a.getActions(u, status, interviewID) {
-			if a == act {
-				return true
-			}
-		}
-		break
-	default:
-
-		return false
 	}
-	return false
+	return None
 }
 
-// PrintStep print step details.
-func (a Application) PrintStep(step *ApplicationStep) {
-	if step == nil {
-		step = a.GetCurrentStep()
-	}
-	rAct := strings.Join(a.ListActions(Recruiter{}, *step), ",")
-	cAct := strings.Join(a.ListActions(Candidate{}, *step), ",")
-	fmt.Printf(step.Description, rAct, cAct)
+func (a *Application) newStep(step Step) {
+	a.Steps = append(a.Steps, newApplicationStep(
+		step.desc,
+		step.defaultRecuirterAction,
+		step.defaultcandidateAction,
+		a,
+		store[step.name],
+	))
 }
 
-// GetHistory display application history.
-func (a Application) GetHistory() {
-	a.job.Print()
-	d := color.New(color.FgWhite, color.BgBlue)
-	for index, step := range a.steps {
-		d.Printf("Step %d:", index+1)
-		step.PrintStep()
+// Print print application.
+func (a Application) Print() {
+	fmt.Println("-----------------------------")
+	for _, step := range a.Steps {
+		step.Print()
+		fmt.Println("-----------------------------")
 	}
 }

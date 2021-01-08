@@ -3,55 +3,57 @@ package app
 import (
 	"fmt"
 	"strings"
-
-	"github.com/fatih/color"
 )
 
-func newApplicationStep(
-	desc string,
-	status ApplicationStatus,
-	recruiterAction, candidateAction Action,
-	interviewID uint8,
-	app *Application,
-) *ApplicationStep {
+// Step struct
+type Step struct {
+	name                    ApplicationStatus
+	desc                    string
+	nextStep                ApplicationStatus
+	defaultRecuirterAction  Action
+	defaultcandidateAction  Action
+	recuirterAllowedActions []Action
+	candidateAllowedActions []Action
+}
+
+// ApplicationStep struct.
+type ApplicationStep struct {
+	Desc            string
+	RecuirterAction Action
+	CandidateAction Action
+	Step            Step
+	App             *Application
+}
+
+// newApplicationStep new applicationStep.
+func newApplicationStep(desc string, rAct, cAct Action,
+	app *Application, step Step) *ApplicationStep {
 	return &ApplicationStep{
-		Description:     desc,
-		status:          status,
-		recruiterAction: recruiterAction,
-		candidateAction: candidateAction,
-		interviewID:     interviewID,
-		app:             app,
+		Desc:            desc,
+		RecuirterAction: rAct,
+		CandidateAction: cAct,
+		Step:            step,
 	}
 }
 
-// ApplicationStep application step.
-type ApplicationStep struct {
-	Description     string
-	app             *Application
-	status          ApplicationStatus
-	recruiterAction Action
-	candidateAction Action
-	interviewID     uint8
+// Print print step data.
+func (a ApplicationStep) Print() {
+	fmt.Println(statusMap[a.Step.name])
+	fmt.Println("description:", a.getDescription())
+	fmt.Println("recruiter:", ActionStringMap[a.RecuirterAction])
+	fmt.Println("candidate:", ActionStringMap[a.CandidateAction])
 }
 
-// GetStatus return application status.
-func (a ApplicationStep) GetStatus() ApplicationStatus {
-	return a.status
-}
+func (a ApplicationStep) getDescription() string {
+	s1 := []string{}
+	for _, act := range a.Step.recuirterAllowedActions {
+		s1 = append(s1, ActionStringMap[act])
+	}
 
-// PrintStep print current step data.
-func (a ApplicationStep) PrintStep() {
-	d := color.New(color.FgWhite, color.BgHiBlack)
-	d.Printf(`
-Desciption: %s
--->Recruiter Action: %s 
--->Candidate Action: %s 
-`, a.formatDescription(), ActionIntStringMap[a.recruiterAction],
-		ActionIntStringMap[a.candidateAction])
-}
+	s2 := []string{}
+	for _, act := range a.Step.candidateAllowedActions {
+		s2 = append(s2, ActionStringMap[act])
+	}
 
-func (a ApplicationStep) formatDescription() string {
-	rAct := strings.Join(a.app.ListActions(Recruiter{}, a), ",")
-	cAct := strings.Join(a.app.ListActions(Candidate{}, a), ",")
-	return fmt.Sprintf(a.Description, rAct, cAct)
+	return fmt.Sprintf(a.Desc, strings.Join(s1, ","), strings.Join(s2, ","))
 }

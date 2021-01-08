@@ -6,5 +6,5 @@ use `make run`
 ```
 ### Run Application process tests.
 ```js
-To run the tests use `make run`
+To run the tests use `make test`
 ```

@@ -2,93 +2,29 @@ package app_test
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"time"
 
 	app "github.com/idirall22/doc/application"
 )
 
 func TestMain(t *testing.T) {
-	t.Run("Full Single Interview Application", testFullSingleInterviewApplication)
-	t.Run("Reject Single Interview Application", testRejectSingleInterviewApplication)
-	t.Run("Full Multi Interview Application", testFullMultiInterviewApplication)
-	t.Run("Skip Multi Interview Application", testSkipMultiInterviewApplication)
-	t.Run("Schedule Interview Application", testScheduleInterviewApplication)
+	t.Run("Full Single Interview Application", testApplication)
 }
 
-func testFullSingleInterviewApplication(t *testing.T) {
-	store := app.NewStore()
-	r := app.NewRecruiter(store)
-	c := app.NewCandidate(store)
-	r.CreateJob("Wanted a software developer", 1, false)
-	a := c.Apply(1)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	assert.Equal(t, a.GetCurrentStep().GetStatus(), app.Closed)
-	assert.Equal(t, len(a.ListSteps()), 6)
-}
-
-func testRejectSingleInterviewApplication(t *testing.T) {
-	store := app.NewStore()
-	r := app.NewRecruiter(store)
-	c := app.NewCandidate(store)
-	r.CreateJob("Wanted a software developer", 1, false)
-	a := c.Apply(1)
-	r.UpdateApplication(a.ID, app.Reject)
-	assert.Equal(t, a.GetCurrentStep().GetStatus(), app.Closed)
-	assert.Equal(t, len(a.ListSteps()), 3)
-}
-
-func testFullMultiInterviewApplication(t *testing.T) {
-	store := app.NewStore()
-	r := app.NewRecruiter(store)
-	c := app.NewCandidate(store)
-	r.CreateJob("Wanted a software developer", 2, false)
-	a := c.Apply(1)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	assert.Equal(t, a.GetCurrentStep().GetStatus(), app.Closed)
-	assert.Equal(t, len(a.ListSteps()), 8)
-}
-
-func testSkipMultiInterviewApplication(t *testing.T) {
-	store := app.NewStore()
-	r := app.NewRecruiter(store)
-	c := app.NewCandidate(store)
-	r.CreateJob("Wanted a software developer", 2, false)
-	a := c.Apply(1)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	r.UpdateApplication(a.ID, app.Accept)
-	r.UpdateApplication(a.ID, app.Skip)
-	c.UpdateApplication(a.ID, app.Accept)
-	assert.Equal(t, a.GetCurrentStep().GetStatus(), app.Closed)
-	assert.Equal(t, len(a.ListSteps()), 7)
-}
-
-func testScheduleInterviewApplication(t *testing.T) {
-	store := app.NewStore()
-	r := app.NewRecruiter(store)
-	c := app.NewCandidate(store)
-	r.CreateJob("Wanted a software developer", 2, true)
-	a := c.Apply(1)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.Schedule(a, []string{"2020-12-23", "2020-12-24", "2020-12-25"})
-	r.UpdateApplication(a.ID, app.Reschedule)
-	c.Schedule(a, []string{"2020-12-23", "2020-12-24", "2020-12-25"})
-	r.FixDate(a, 0)
-	c.UpdateApplication(a.ID, app.Accept)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	r.UpdateApplication(a.ID, app.Accept)
-	c.UpdateApplication(a.ID, app.Accept)
-	assert.Equal(t, a.GetCurrentStep().GetStatus(), app.Closed)
-	assert.Equal(t, len(a.ListSteps()), 12)
-	// a.GetHistory()
+func testApplication(t *testing.T) {
+	c1 := app.NewJobConstraint(app.AfterApply, app.StartSchedule)
+	c2 := app.NewJobConstraint(app.AfterInterview, app.StartInterview)
+	job := app.NewJob(1, app.Recruiter{}, []*app.JobConstraint{c1, c2})
+	a := app.NewApplication(&app.Candidate{}, job)
+	a.SetState(app.Recruiter{}, app.Accept)
+	a.ProposeDates(time.Now())
+	a.RescheduleDate()
+	a.ProposeDates(time.Now())
+	a.FixDate(0)
+	a.SetState(app.Candidate{}, app.Accept)
+	a.SetState(app.Recruiter{}, app.Accept)
+	a.SetState(app.Candidate{}, app.Accept)
+	a.SetState(app.Recruiter{}, app.Accept)
+	a.SetState(app.Candidate{}, app.Accept)
+	a.Print()
 }
